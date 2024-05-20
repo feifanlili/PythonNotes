@@ -13,6 +13,8 @@ df = pd.read_csv('G:/3D_P/Data/3D/CT/b_plt/0.05.csv')
 # print(df.head(400))  # first 400 data
 # print(df.tail(40))  # last 400 data
 
+## check the key
+# df.columns
 
 #--------------------- DataFrame ---------------------#
 
