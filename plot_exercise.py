@@ -296,51 +296,51 @@ import pandas as pd
 
 
 # Define a list of font families to test
-font_families = ['serif', 'sans-serif', 'cursive', 'fantasy', 'monospace']
+# font_families = ['serif', 'sans-serif', 'cursive', 'fantasy', 'monospace']
 
-# Define text to display for each font family
-text = 'Hello!'
+# # Define text to display for each font family
+# text = 'Hello!'
 
-# Create a plot for each font family
-for i, font_family in enumerate(font_families):
-    plt.subplot(1, len(font_families), i+1)
-    plt.text(0.5, 0.5, text, fontfamily=font_family, fontsize=12, ha='center')
-    plt.title(font_family)
-    plt.axis('off')  # Hide axis
-    plt.tight_layout()
+# # Create a plot for each font family
+# for i, font_family in enumerate(font_families):
+#     plt.subplot(1, len(font_families), i+1)
+#     plt.text(0.5, 0.5, text, fontfamily=font_family, fontsize=12, ha='center')
+#     plt.title(font_family)
+#     plt.axis('off')  # Hide axis
+#     plt.tight_layout()
 
-plt.show()
+# plt.show()
 
 
 # #-------------multiple plot------------------
 # print(plt.style.available) 
-plt.style.use('ggplot')
-params = {
-"font.size": 12,     # 全局字号
-'font.family':'STIXGeneral', # 全局字体
-"figure.subplot.wspace":0.2, # 图-子图-宽度百分比
-"figure.subplot.hspace":0.4, # 图-子图-高度百分比
-"axes.spines.right":False,  # 坐标系-右侧线
-"axes.spines.top":False,   # 坐标系-上侧线
-"axes.titlesize":12,   # 坐标系-标题-字号
-"axes.labelsize": 12,  # 坐标系-标签-字号
-"legend.fontsize": 12,  # 图例-字号
-"xtick.labelsize": 10,  # 刻度-标签-字号
-"ytick.labelsize": 10,  # 刻度-标签-字号
-"xtick.direction":'in',   # 刻度-方向
-"ytick.direction":'in'  # 刻度-方向
-}
-mpl.rcParams.keys(params)
+# plt.style.use('ggplot')
+# params = {
+# "font.size": 12,     # 全局字号
+# 'font.family':'STIXGeneral', # 全局字体
+# "figure.subplot.wspace":0.2, # 图-子图-宽度百分比
+# "figure.subplot.hspace":0.4, # 图-子图-高度百分比
+# "axes.spines.right":False,  # 坐标系-右侧线
+# "axes.spines.top":False,   # 坐标系-上侧线
+# "axes.titlesize":12,   # 坐标系-标题-字号
+# "axes.labelsize": 12,  # 坐标系-标签-字号
+# "legend.fontsize": 12,  # 图例-字号
+# "xtick.labelsize": 10,  # 刻度-标签-字号
+# "ytick.labelsize": 10,  # 刻度-标签-字号
+# "xtick.direction":'in',   # 刻度-方向
+# "ytick.direction":'in'  # 刻度-方向
+# }
+# mpl.rcParams.keys(params)
 
-t_a = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/1.5.csv')['time']
-crack_length_a = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/1.5.csv')['crack_len']
-crack_tip_a = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/1.5.csv')['crack_tip']
+# t_a = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/1.5.csv')['time']
+# crack_length_a = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/1.5.csv')['crack_len']
+# crack_tip_a = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/1.5.csv')['crack_tip']
 
-t_b = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/2.5.csv')['time']
-crack_length_b = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/2.5.csv')['crack_len']
+# t_b = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/2.5.csv')['time']
+# crack_length_b = pd.read_csv('G:/3D_P/Data/2D/b/group0/data_all/2.5.csv')['crack_len']
 
-x_list = [t_a, t_b]
-y_list = [crack_length_a, crack_length_b]
+# x_list = [t_a, t_b]
+# y_list = [crack_length_a, crack_length_b]
 
 
 
@@ -391,3 +391,29 @@ y_list = [crack_length_a, crack_length_b]
 
 # xtick.direction: in
 # ytick.direction: in
+###########################################################################
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection="3d")
+
+# Plot each hysteresis loop
+energy_dissipation = []  # Store dissipated energy for each cycle
+
+for i, cycle in enumerate(cycles):
+    strain = strain_data[i]
+    stress = stress_data[i]
+
+    # Compute dissipated energy (area inside the loop)
+    energy = np.abs(simps(stress, strain))  # Numerical integration
+    energy_dissipation.append(energy)
+
+    # Plot loop in 3D
+    ax.plot(strain, stress, zs=cycle, zdir="z", label=f"Cycle {cycle}")
+
+# Labels
+ax.set_xlabel("Strain [%]")
+ax.set_ylabel("Stress [MPa]")
+ax.set_zlabel("Cycle Number")
+ax.set_title("3D Hysteresis Loop")
+
+plt.legend()
+plt.show()
