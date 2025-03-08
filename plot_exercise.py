@@ -9,6 +9,7 @@ from numpy.core.function_base import linspace
 
 import csv
 import pandas as pd
+from scipy.integrate import simps
 
 
 
@@ -392,28 +393,51 @@ import pandas as pd
 # xtick.direction: in
 # ytick.direction: in
 ###########################################################################
+# Example data (Replace with your actual data)
+cycles = [24, 47, 60]  # Cycle numbers
+strain_data = [np.linspace(-0.02, 0.02, 100) for _ in cycles]  # Example strain
+stress_data = [np.sin(4 * np.pi * strain) * 100 for strain in strain_data]  # Example stress
+
 fig = plt.figure(figsize=(10, 7))
 ax = fig.add_subplot(111, projection="3d")
 
+# Normalize the axes to balance proportions
+max_strain = max(abs(np.array(strain_data)).max(), 1e-6)
+max_stress = max(abs(np.array(stress_data)).max(), 1e-6)
+max_cycle = max(cycles)
+
+# Set aspect ratio (adjust these values to fine-tune)
+ax.set_box_aspect([1, 1, 0.5])  # X (Strain), Y (Stress), Z (Cycle)
+
 # Plot each hysteresis loop
 energy_dissipation = []  # Store dissipated energy for each cycle
+colors = plt.cm.viridis(np.linspace(0, 1, len(cycles)))  # Generate colors
 
 for i, cycle in enumerate(cycles):
-    strain = strain_data[i]
-    stress = stress_data[i]
+    strain = strain_data[i] / max_strain  # Normalize strain
+    stress = stress_data[i] / max_stress  # Normalize stress
+    cycle_scaled = cycle / max_cycle * 10  # Scale cycle number
 
-    # Compute dissipated energy (area inside the loop)
-    energy = np.abs(simps(stress, strain))  # Numerical integration
+    # Compute dissipated energy
+    energy = np.abs(simps(stress_data[i], strain_data[i]))
     energy_dissipation.append(energy)
 
-    # Plot loop in 3D
-    ax.plot(strain, stress, zs=cycle, zdir="z", label=f"Cycle {cycle}")
+    # Plot loop in 3D with color mapping
+    ax.plot(strain, stress, zs=cycle_scaled, zdir="z", color=colors[i], label=f"Cycle {cycle}")
 
-# Labels
-ax.set_xlabel("Strain [%]")
-ax.set_ylabel("Stress [MPa]")
-ax.set_zlabel("Cycle Number")
-ax.set_title("3D Hysteresis Loop")
+# Labels & Aesthetics
+ax.set_xlabel("Normalized Strain")
+ax.set_ylabel("Normalized Stress")
+ax.set_zlabel("Normalized Cycle Number")
+ax.set_title("Enhanced 3D Hysteresis Plot")
+
+# Improve grid and viewing angle
+ax.grid(True)
+ax.view_init(elev=30, azim=240)  # Adjust viewing angle
 
 plt.legend()
 plt.show()
+
+# Print Energy Dissipation for Each Cycle
+for cycle, energy in zip(cycles, energy_dissipation):
+    print(f"Cycle {cycle}: Dissipated Energy = {energy:.2f} MPa⋅%")
