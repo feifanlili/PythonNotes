@@ -1,39 +1,103 @@
-from abaqus import *
-from abaqusConstants import *
-import part, material, section, assembly, step, mesh, job
+** KINEMATIC/DISTRIBUTING COUPLING
+**
+*COUPLING, CONSTRAINT NAME=COUPLING_1, REF NODE=1044, SURFACE=SURF_COUPLING_1
+*KINEMATIC
+       1,        6
+*COUPLING, CONSTRAINT NAME=COUPLING_2, REF NODE=1045, SURFACE=SURF_COUPLING_2
+*KINEMATIC
+       1,        6
+**
+** 
+**
+**
+** SECTION DATA
+**
+*SOLID SECTION, ELSET=FOAM, MATERIAL=HUNTSMAN_30262BX_20DEGC_ROH400_VISCOE
+**
+** MATERIALS
+**
+**
+**20DEGC
+**Einf40MPa
+**
+*MATERIAL, NAME=HUNTSMAN_30262BX_20DEGC_ROH400_VISCOE
+*DENSITY
+                  4.E-10,
+*ELASTIC, MODULI=LONG TERM
+40., 0.32
+*VISCOELASTIC, TIME=PRONY	
+**       gi,     kappai,       taui		
+0.146461257, 0.146461257, 0.002016369
+0.069248654, 0.069248654, 0.011131003
+0.387352212, 0.387352212, 3.835316173
+ 0.06527644,  0.06527644, 0.039736179
+0.072589999, 0.072589999, 0.163375106
+**
+**
+**
+** AMPLITUDES
+**
+*AMPLITUDE, NAME=DMA, DEFINITION=PERIODIC, VALUE=RELATIVE, TIME=STEP TIME
+       1,                     31.4,                       0.,                       0.,
+                      0.,                    1
+**
+** 
+**
+**
+** SURFACE DEFINITIONS 
+**
+*SURFACE, NAME=SURF_COUPLING_1, TYPE=NODE
+SURF_COUPLING_1,                       1.
+*SURFACE, NAME=SURF_COUPLING_2, TYPE=NODE
+SURF_COUPLING_2,                       1.
 
-# Create a model
-model = mdb.Model(name='MyModel')
+**
+** STEPS
+**
+**
+** STEP 1
+**
+*STEP, NAME=STEP 11, NLGEOM=YES
+GERI
+*DYNAMIC, EXPLICIT, IMPROVED DT METHOD=YES
+,                       1.
+**
+** CLOAD
+**
+*CLOAD, OP=NEW, AMPLITUDE=DMA
+    1045,        2,                       100
+**
+** BOUNDARY
+**
+*BOUNDARY, TYPE=DISPLACEMENT, OP=NEW
+    1044,        1,        6,                       0.
+    1045,        3,        6,                       0.
+    1045,        1,        1,                       0.
+*VARIABLE MASS SCALING, TYPE=BELOW MIN, DT=6.E-7, FREQUENCY=10
+*OUTPUT, FIELD, NUMBER INTERVAL=1000
+*NODE OUTPUT
+A,
+NT,
+RF,
+U,
+V,
+*ELEMENT OUTPUT
+DMICRT,
+E,
+EMSF,
+PE,
+PEEQ,
+S,
+SDEG,
+STATUS,
+TEMP,
+*OUTPUT, HISTORY, FREQUENCY=1
+*ENERGY OUTPUT, VARIABLE=PRESELECT
+*NODE OUTPUT, NSET=nset_auswert
+A,
+NT,
+RF,
+U,
+V,
+*END STEP
 
-# Create a part (e.g., a 2D rectangular block)
-sketch = model.ConstrainedSketch(name='Sketch', sheetSize=200.0)
-sketch.rectangle(point1=(0, 0), point2=(10, 5))
-part = model.Part(name='Block', dimensionality=TWO_D_PLANAR, type=DEFORMABLE_BODY)
-part.BaseShell(sketch=sketch)
-
-# Create material
-material = model.Material(name='Steel')
-material.Elastic(table=((210000.0, 0.3),))  # Young’s Modulus & Poisson's Ratio
-
-# Create section and assign to the part
-section = model.HomogeneousSolidSection(name='Section-1', material='Steel', thickness=1.0)
-region = part.Set(faces=part.faces, name='Set-1')
-part.SectionAssignment(region=region, sectionName='Section-1')
-
-# Create assembly
-assembly = model.rootAssembly
-assembly.Instance(name='BlockInstance', part=part, dependent=ON)
-
-# Create step
-model.StaticStep(name='Step-1', previous='Initial')
-
-# Create boundary condition (fix one side)
-edges = part.edges.findAt(((0, 2.5, 0),))
-region = assembly.instances['BlockInstance'].Set(edges=edges, name='BC-Set')
-model.DisplacementBC(name='BC-1', createStepName='Initial', region=region, u1=0.0, u2=0.0)
-
-# Create job and write input file
-job = mdb.Job(name='MyJob', model='MyModel')
-job.writeInput(consistencyChecking=OFF)
-
-print("Input file 'MyJob.inp' has been generated.")
