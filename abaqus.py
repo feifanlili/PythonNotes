@@ -1,103 +1,63 @@
-** KINEMATIC/DISTRIBUTING COUPLING
-**
-*COUPLING, CONSTRAINT NAME=COUPLING_1, REF NODE=1044, SURFACE=SURF_COUPLING_1
-*KINEMATIC
-       1,        6
-*COUPLING, CONSTRAINT NAME=COUPLING_2, REF NODE=1045, SURFACE=SURF_COUPLING_2
-*KINEMATIC
-       1,        6
-**
-** 
-**
-**
-** SECTION DATA
-**
-*SOLID SECTION, ELSET=FOAM, MATERIAL=HUNTSMAN_30262BX_20DEGC_ROH400_VISCOE
-**
-** MATERIALS
-**
-**
-**20DEGC
-**Einf40MPa
-**
-*MATERIAL, NAME=HUNTSMAN_30262BX_20DEGC_ROH400_VISCOE
-*DENSITY
-                  4.E-10,
-*ELASTIC, MODULI=LONG TERM
-40., 0.32
-*VISCOELASTIC, TIME=PRONY	
-**       gi,     kappai,       taui		
-0.146461257, 0.146461257, 0.002016369
-0.069248654, 0.069248654, 0.011131003
-0.387352212, 0.387352212, 3.835316173
- 0.06527644,  0.06527644, 0.039736179
-0.072589999, 0.072589999, 0.163375106
-**
-**
-**
-** AMPLITUDES
-**
-*AMPLITUDE, NAME=DMA, DEFINITION=PERIODIC, VALUE=RELATIVE, TIME=STEP TIME
-       1,                     31.4,                       0.,                       0.,
-                      0.,                    1
-**
-** 
-**
-**
-** SURFACE DEFINITIONS 
-**
-*SURFACE, NAME=SURF_COUPLING_1, TYPE=NODE
-SURF_COUPLING_1,                       1.
-*SURFACE, NAME=SURF_COUPLING_2, TYPE=NODE
-SURF_COUPLING_2,                       1.
+*Heading
+Dynamic Mechanical Analysis (DMA) Simulation - PU Foam
 
-**
-** STEPS
-**
-**
-** STEP 1
-**
-*STEP, NAME=STEP 11, NLGEOM=YES
-GERI
-*DYNAMIC, EXPLICIT, IMPROVED DT METHOD=YES
-,                       1.
-**
-** CLOAD
-**
-*CLOAD, OP=NEW, AMPLITUDE=DMA
-    1045,        2,                       100
-**
-** BOUNDARY
-**
-*BOUNDARY, TYPE=DISPLACEMENT, OP=NEW
-    1044,        1,        6,                       0.
-    1045,        3,        6,                       0.
-    1045,        1,        1,                       0.
-*VARIABLE MASS SCALING, TYPE=BELOW MIN, DT=6.E-7, FREQUENCY=10
-*OUTPUT, FIELD, NUMBER INTERVAL=1000
-*NODE OUTPUT
-A,
-NT,
-RF,
-U,
-V,
-*ELEMENT OUTPUT
-DMICRT,
-E,
-EMSF,
-PE,
-PEEQ,
-S,
-SDEG,
-STATUS,
-TEMP,
-*OUTPUT, HISTORY, FREQUENCY=1
-*ENERGY OUTPUT, VARIABLE=PRESELECT
-*NODE OUTPUT, NSET=nset_auswert
-A,
-NT,
-RF,
-U,
-V,
-*END STEP
+** Define Part - Rectangular Specimen (100 mm x 10 mm x 10 mm)
+*Part, name=Sample
+*Node
+1, 0.0, 0.0, 0.0
+2, 100.0, 0.0, 0.0
+3, 100.0, 10.0, 0.0
+4, 0.0, 10.0, 0.0
+5, 0.0, 0.0, 10.0
+6, 100.0, 0.0, 10.0
+7, 100.0, 10.0, 10.0
+8, 0.0, 10.0, 10.0
+
+*Element, type=C3D8R
+1, 1, 2, 3, 4, 5, 6, 7, 8
+
+** Define Material Properties
+*Material, name=PU_Foam
+*Density
+1.2e-9   **(Density in tons/mm³)
+*Elastic, type=ISO
+10.0E3, 0.3  **(Initial Young’s modulus and Poisson's ratio)
+*Viscoelastic, Frequency
+0.1, 9.5E3, 0.3E3
+1.0, 9.2E3, 0.8E3
+10.0, 8.5E3, 1.2E3
+100.0, 7.0E3, 2.0E3
+
+** Define Section and Assign to Part
+*Solid Section, material=PU_Foam, elset=AllElements
+,
+
+** Define Assembly
+*Assembly, name=Assembly
+*Instance, name=SampleInstance, part=Sample
+*End Instance
+*End Assembly
+
+** Define Step for Frequency Domain Analysis
+*Step, name=DMA_Test, nlgeom=YES
+*Steady State Dynamics, Direct
+0.1, 100.0, 10
+*End Step
+
+** Define Boundary Conditions
+*Boundary
+1, 1, 6, 0.0  **(Fully fixed one end of the sample)
+
+** Define Sinusoidal Loading at Free End
+*Cload
+2, 3, 5.0  **(Apply 5N force in z-direction for oscillation)
+
+** Define Output Requests
+*Output, field
+*Node Output
+U, V  **(Displacement output for amplitude phase analysis)
+*End Output
+
+** End of Input File
+
 
