@@ -1,0 +1,148 @@
+import os
+import glob
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import scipy.integrate
+import scipy.interpolate
+import matplotlib
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import re
+
+class DMA():
+    def __init__(self, rootpath):
+        '''
+        Input DMA data folder for the data visualization.
+        Each folder should contain a .xls file, listing all the important information.
+        If the folder contains a 'Hysterese.txt', then the stress-strain relation has been recorded at the specific cycle,
+        then collect these data into a dataframe list for the later processing.
+        '''
+        self.name = os.path.basename(rootpath)
+        self.preprocessing(rootpath)
+
+    def preprocessing(self, rootpath):
+        ####################################################################################
+        # 1. Check excel file
+        ####################################################################################
+        try:
+            self.excel_file_path = glob.glob(os.path.join(rootpath, "*.xls"))[0]
+            self.df_excel = pd.read_excel(self.excel_file_path)
+            self.cycles = np.array(self.df_excel['Periods'][1:])
+            self.E_storage = np.array(self.df_excel["E'"][1:])
+            self.E_loss = np.array(self.df_excel["E''"][1:])
+            self.tan_delta = np.array(self.df_excel["tan delta"][1:])
+        except IndexError:
+            print(f"**Error:** No .xls files found in the directory: {rootpath}")
+            self.excel_file_path = None
+        ####################################################################################
+        # 2. Check hysterese file
+        ####################################################################################
+        hysterese_file_path = os.path.join(rootpath,'Hysterese.txt')
+        if os.path.exists(hysterese_file_path):
+            print('Hysterese file exists in the folder.')
+            # Store parsed data
+            data_dict = {}  
+            current_point = None  
+
+            with open(hysterese_file_path, "r") as file:
+                lines = file.readlines()
+
+                for i, line in enumerate(lines):
+                    line = line.strip()
+                    
+                    # Detect "Point X"
+                    if line.startswith("Point"):
+                        current_point = line
+                        data_dict[current_point] = []
+                    
+                    # Ignore header, but store the actual data
+                    elif current_point and line and not line.startswith("Time"):
+                        data_dict[current_point].append(line.split("\t"))  # Assuming tab-separated values
+
+            # Convert to DataFrame
+            dfs = {}
+
+            for i,(point, data) in enumerate(data_dict.items()):
+                dfs[self.cycles[i]] = pd.DataFrame(data, columns=["Time (s)", "Stress (MPa)", "Strain (%)"])
+                dfs[self.cycles[i]] = dfs[self.cycles[i]].astype(float)  # Convert to numerical values
+
+            self.hysterese_dfs = dfs
+            
+            self.energy_dissipations = self.calculate_energy_dissipation()
+        else:
+            print('No Hysterese file in the folder.')
+
+    def plot_hysterese_2d(self, num=None):
+        '''
+        num: the number of the curves to be plotted.
+        '''
+        if num==None:
+            num=len(self.cycles)-1
+
+        cmap = plt.get_cmap('turbo')
+        norm = mcolors.Normalize(vmin=0,vmax=num)
+        plt.style.use('bmh')
+        plt.rcParams.update({
+            "axes.facecolor": "white",
+            "axes.grid" : True
+        })
+        plt.figure(figsize=(10, 6))
+
+        for i, (point, df) in enumerate(self.hysterese_dfs.items()):
+            if i<num:
+                plt.plot(df["Strain (%)"], df["Stress (MPa)"], label=f"Cycle {point}", color = cmap(norm(i)))
+                # plt.plot(df["Time (s)"], df["Strain (%)"], label=f"Cycle {point} - Strain")
+                # plt.plot(df["Time (s)"], df["Stress (MPa)"], linestyle="dashed", label=f"{point} - Stress")
+
+        plt.xlabel("Strain (%)")
+        plt.ylabel("Stress (MPa)")
+        plt.title(self.name)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def calculate_energy_dissipation(self):
+        energys = []
+        for i, (point, df) in enumerate(self.hysterese_dfs.items()):
+            # calculate the area using scipy.integration
+            energy = scipy.integrate.simpson(df["Stress (MPa)"],df["Strain (%)"],dx=0.01)
+            # correct the unit based on the units of stress and strain MPa * %
+            energy = energy*1e6/1e2
+            energys.append(energy)
+        return np.array(energys)
+
+    def plot_hysterese_and_energy(self, num, noLastData=False):
+        cmap = plt.get_cmap('turbo')
+        norm = mcolors.Normalize(vmin=0,vmax=num)
+        plt.style.use('bmh')
+        plt.rcParams.update({
+            "axes.facecolor": "white",
+            "axes.grid" : True
+        })
+        fig, axs = plt.subplots(1, 2)
+        fig.suptitle('Dynamical Mechanical Analysis (DMA)\n'
+        'Temperature: 45°C, '+ self.name)
+        for i, (point, df) in enumerate(self.hysterese_dfs.items()):
+            if noLastData:
+                if i==len(self.hysterese_dfs)-1:
+                    break
+            elif i<num:
+                axs[0].plot(df["Strain (%)"], df["Stress (MPa)"], label=f"Cycle {point}", color = cmap(norm(i)))
+                axs[1].scatter([self.cycles[i]], [self.energy_dissipations[i]], color = cmap(norm(i)))
+
+        axs[0].set_xlabel("Strain (%)")
+        axs[0].set_ylabel("Stress (MPa)")
+        axs[0].set_title('Hysterese (at specific number of cycle)')
+
+        
+        axs[1].set_xlabel("Cycle")
+        axs[1].set_ylabel(r"Energy ($\mathrm{J/m^3}$)")
+        # axs[1].set_xscale('log')
+        # axs[1].set_yscale('log')
+        axs[1].set_title("Energy Dissipation per Cycle")
+
+        axs[0].legend()
+        plt.grid(True)
+        plt.show()
